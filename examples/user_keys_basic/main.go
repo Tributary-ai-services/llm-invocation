@@ -92,7 +92,7 @@ func exampleBasicUserKey(client llminvocation.Client) error {
 		return fmt.Errorf("invocation failed: %w", err)
 	}
 	
-	fmt.Printf("Response: %s\n", response.Content)
+	fmt.Printf("Response: %s\n", response.GetContent())
 	fmt.Printf("Provider: %s\n", response.Provider)
 	fmt.Printf("Model: %s\n", response.Model)
 	
@@ -164,7 +164,8 @@ func exampleMultipleProviders(client llminvocation.Client) error {
 			continue
 		}
 		
-		fmt.Printf("  Success: %s\n", response.Content[:min(100, len(response.Content))])
+		content := response.GetContent()
+		fmt.Printf("  Success: %s\n", content[:min(100, len(content))])
 	}
 	
 	return nil

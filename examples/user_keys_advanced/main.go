@@ -213,8 +213,8 @@ func exampleStreaming(client llminvocation.Client) error {
 			return fmt.Errorf("streaming error: %w", err)
 		}
 		
-		if chunk.Content != "" {
-			fmt.Printf("%s", chunk.Content)
+		if chunk.Delta != nil && chunk.Delta.Content != "" {
+			fmt.Printf("%s", chunk.Delta.Content)
 		}
 	}
 	fmt.Printf("\nStreaming complete.\n")

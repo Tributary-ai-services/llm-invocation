@@ -1,0 +1,308 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BYOK Enhanced Invocation Request",
+  "description": "Request format for LLM invocations with user-provided encrypted API keys",
+  "type": "object",
+  "required": ["request"],
+  "properties": {
+    "request": {
+      "type": "object",
+      "description": "Enhanced invocation request with optional user credentials",
+      "required": ["invocation_request"],
+      "properties": {
+        "invocation_request": {
+          "$ref": "#/definitions/InvocationRequest"
+        },
+        "user_credentials": {
+          "$ref": "#/definitions/UserCredentials"
+        },
+        "use_backend_keys": {
+          "type": "boolean",
+          "description": "Use backend keys instead of user keys (default: false)",
+          "default": false
+        },
+        "security_options": {
+          "$ref": "#/definitions/SecurityOptions"
+        }
+      }
+    },
+    "user_secret": {
+      "type": "string",
+      "description": "Password to decrypt user API keys (required if user_credentials provided)",
+      "minLength": 12
+    }
+  },
+  "definitions": {
+    "InvocationRequest": {
+      "type": "object",
+      "required": ["messages"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["openai", "anthropic", "google"],
+          "description": "LLM provider (auto-detected from model if not specified)"
+        },
+        "model": {
+          "type": "string",
+          "description": "Model identifier (e.g., 'gpt-4', 'claude-3-opus')"
+        },
+        "messages": {
+          "type": "array",
+          "description": "Conversation messages",
+          "items": {
+            "$ref": "#/definitions/Message"
+          },
+          "minItems": 1
+        },
+        "stream": {
+          "type": "boolean",
+          "description": "Enable streaming response",
+          "default": false
+        },
+        "options": {
+          "$ref": "#/definitions/ModelOptions"
+        },
+        "tools": {
+          "type": "array",
+          "description": "Available tools/functions",
+          "items": {
+            "$ref": "#/definitions/Tool"
+          }
+        }
+      }
+    },
+    "UserCredentials": {
+      "type": "object",
+      "required": ["user_id", "providers"],
+      "properties": {
+        "user_id": {
+          "type": "string",
+          "description": "Unique user identifier"
+        },
+        "tenant_id": {
+          "type": "string",
+          "description": "Optional tenant/organization ID"
+        },
+        "providers": {
+          "type": "array",
+          "description": "Encrypted API keys per provider",
+          "items": {
+            "$ref": "#/definitions/UserProviderConfig"
+          },
+          "minItems": 1
+        },
+        "request_meta": {
+          "$ref": "#/definitions/RequestMetadata"
+        }
+      }
+    },
+    "UserProviderConfig": {
+      "type": "object",
+      "required": ["provider", "encrypted_key"],
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["openai", "anthropic", "google"],
+          "description": "Provider name"
+        },
+        "encrypted_key": {
+          "type": "string",
+          "description": "Base64-encoded encrypted API key",
+          "contentEncoding": "base64"
+        },
+        "key_fingerprint": {
+          "type": "string",
+          "description": "SHA-256 hash of the API key for validation"
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Key creation timestamp"
+        },
+        "expires_at": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Key expiration timestamp"
+        }
+      }
+    },
+    "Message": {
+      "type": "object",
+      "required": ["role", "content"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["system", "user", "assistant", "tool"],
+          "description": "Message role"
+        },
+        "content": {
+          "oneOf": [
+            {"type": "string"},
+            {"type": "array", "items": {"type": "object"}}
+          ],
+          "description": "Message content (text or multimodal)"
+        },
+        "name": {
+          "type": "string",
+          "description": "Optional name (for tool messages)"
+        },
+        "tool_calls": {
+          "type": "array",
+          "description": "Tool calls made by assistant",
+          "items": {
+            "$ref": "#/definitions/ToolCall"
+          }
+        }
+      }
+    },
+    "ModelOptions": {
+      "type": "object",
+      "properties": {
+        "temperature": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 2,
+          "description": "Sampling temperature"
+        },
+        "max_tokens": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum tokens to generate"
+        },
+        "top_p": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Nucleus sampling parameter"
+        },
+        "frequency_penalty": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2,
+          "description": "Frequency penalty"
+        },
+        "presence_penalty": {
+          "type": "number",
+          "minimum": -2,
+          "maximum": 2,
+          "description": "Presence penalty"
+        },
+        "stop": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Stop sequences"
+        },
+        "seed": {
+          "type": "integer",
+          "description": "Random seed for reproducibility"
+        }
+      }
+    },
+    "SecurityOptions": {
+      "type": "object",
+      "properties": {
+        "require_encryption": {
+          "type": "boolean",
+          "description": "Require all keys to be encrypted",
+          "default": true
+        },
+        "max_key_age": {
+          "type": "string",
+          "description": "Maximum age for encrypted keys (e.g., '24h')",
+          "pattern": "^[0-9]+[smh]$"
+        },
+        "allowed_ips": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "IP addresses/ranges allowed to use these credentials"
+        },
+        "rate_limit": {
+          "$ref": "#/definitions/RateLimit"
+        }
+      }
+    },
+    "RateLimit": {
+      "type": "object",
+      "properties": {
+        "requests_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum requests per minute"
+        },
+        "tokens_per_minute": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Maximum tokens per minute"
+        },
+        "burst_limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Burst request limit"
+        }
+      }
+    },
+    "Tool": {
+      "type": "object",
+      "required": ["name", "description", "parameters"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Tool name"
+        },
+        "description": {
+          "type": "string",
+          "description": "Tool description"
+        },
+        "parameters": {
+          "type": "object",
+          "description": "JSON Schema for tool parameters"
+        }
+      }
+    },
+    "ToolCall": {
+      "type": "object",
+      "required": ["id", "name", "arguments"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique tool call ID"
+        },
+        "name": {
+          "type": "string",
+          "description": "Tool name"
+        },
+        "arguments": {
+          "type": "object",
+          "description": "Tool arguments"
+        }
+      }
+    },
+    "RequestMetadata": {
+      "type": "object",
+      "properties": {
+        "encryption_version": {
+          "type": "string",
+          "description": "Encryption version used",
+          "default": "1.0"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Request timestamp"
+        },
+        "client_ip": {
+          "type": "string",
+          "description": "Client IP address"
+        },
+        "user_agent": {
+          "type": "string",
+          "description": "Client user agent"
+        },
+        "request_id": {
+          "type": "string",
+          "description": "Unique request ID for tracking"
+        }
+      }
+    }
+  }
+}
