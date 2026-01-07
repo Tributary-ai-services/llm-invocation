@@ -39,10 +39,18 @@ This is a Go package for LLM invocation that provides a unified interface for in
 - Example tools (Calculator, Time)
 - JSON schema parameter validation
 
+✅ **User-Controlled API Keys (BYOK)**:
+- Phase 1 implementation with request embedding strategy
+- AES-256-GCM encryption with PBKDF2 key derivation
+- Client-side key utilities and server-side key management
+- Comprehensive audit logging and security features
+- Key rotation, expiration, and validation support
+
 ✅ **Examples & Documentation**:
-- Working examples in `examples/` directory
+- Working examples in `examples/` directory  
+- BYOK usage examples with basic and advanced features
 - Comprehensive documentation and README
-- Unit tests for core components
+- Unit tests for core components and crypto functions
 
 ## Development Commands
 
@@ -56,6 +64,10 @@ go vet ./...         # Run static analysis
 # Run examples (requires API keys)
 cd examples/basic && go run main.go
 cd examples/streaming && go run main.go
+
+# Run BYOK examples
+cd examples/user_keys_basic && go run main.go
+cd examples/user_keys_advanced && go run main.go
 ```
 
 ## Planned Architecture
@@ -64,12 +76,15 @@ Based on the design document, the package will follow this structure:
 
 ```
 github.com/tributary-ai/llm-invocation/
-├── client.go           # Main client interface
+├── client.go           # Main client interface  
 ├── providers/          # Provider implementations (OpenAI, Anthropic, Google)
 ├── streaming/          # Streaming utilities and aggregation
 ├── tools/              # Tools, function calling, and MCP support
 ├── types/              # Common request/response types
-└── examples/           # Usage examples
+├── crypto/             # Encryption utilities for BYOK
+├── auth/               # Authentication and key management
+├── docs/               # Design documents and implementation guides
+└── examples/           # Usage examples including BYOK demos
 ```
 
 ### Key Design Principles
@@ -93,6 +108,33 @@ When implementing this package:
 ## Security Considerations
 
 - Validate all inputs before sending to LLM providers
-- Implement secure API key management and rotation
+- **BYOK Security**: AES-256-GCM encryption with PBKDF2 key derivation (100k iterations)
+- **Key Management**: Secure key rotation, expiration, and fingerprint validation
+- **Audit Logging**: Comprehensive audit trails for all key operations
+- **Memory Safety**: Secure zeroing of sensitive data in memory
 - Sandbox tool execution to prevent malicious code execution
 - Add rate limiting and audit logging capabilities
+
+## BYOK (Bring Your Own Keys) Implementation
+
+**Status**: ✅ Phase 1 Complete - Request Embedding Strategy
+
+The user-controlled API key system allows users to provide their own LLM provider API keys instead of relying on backend-stored keys. Phase 1 implements request embedding where encrypted API keys are sent with each request.
+
+### Key Features
+- **End-to-end Encryption**: User keys encrypted with AES-256-GCM
+- **Client-side Utilities**: Key encryption, validation, rotation tools
+- **Server-side Management**: Secure decryption and audit logging
+- **Multiple Providers**: Support for OpenAI, Anthropic, Google APIs
+- **Security Controls**: Expiration, rate limiting, IP restrictions
+
+### Documentation
+- **Design**: `docs/user-key-management-design.md` - Architecture and security analysis
+- **Roadmap**: `docs/user-key-roadmap.md` - Multi-phase implementation plan  
+- **Implementation**: `docs/user-keys-implementation.md` - Phase 1 technical details
+
+### Future Phases
+- Phase 2: Session-based key caching
+- Phase 3: JWT token system
+- Phase 4: KMS integration
+- Phase 5: Enterprise features
